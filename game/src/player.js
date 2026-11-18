@@ -48,8 +48,8 @@ export function updatePlayer(state, dt) {
     const speed = sprint ? 9.5 : 5.8;
     const sin = Math.sin(state.camYaw);
     const cos = Math.cos(state.camYaw);
-    let mx = (-sin * fwd + cos * strafe);
-    let mz = (-cos * fwd - sin * strafe);
+    let mx = (sin * fwd - cos * strafe);
+    let mz = (cos * fwd + sin * strafe);
     const len = Math.sqrt(mx * mx + mz * mz);
     if (len > 0) { mx /= len; mz /= len; }
     const nx = p.mesh.position.x + mx * speed * dt;
@@ -130,6 +130,7 @@ export function tryEnterCar(state) {
     car.stolen = true;
   }
   p.mesh.visible = false;
+  state.camYaw = car.heading;
   state.audio.carDoor();
   state.flash(car.stolen ? 'You took the car' : 'Behind the wheel');
 }
@@ -141,7 +142,7 @@ export function updateCamera(state, dt) {
     : (p.car ? p.car.mesh.position.clone().add(new THREE.Vector3(0, 1.6, 0)) : p.mesh.position.clone());
   // When driving, ease the camera behind the car; on foot it stays where the mouse put it.
   if (!p.onFoot && p.car && Math.abs(p.car.speed) > 2) {
-    const behind = p.car.heading + Math.PI;
+    const behind = p.car.heading;
     let diff = behind - state.camYaw;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;

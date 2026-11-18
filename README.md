@@ -40,8 +40,11 @@ No build step — the game is plain static files under `game/`.
 
 - The graded make.fun submission is keyboard-only; the touch controls in
   `game/src/touch.js` (plus a one-line input hook in `game/src/main.js`) were
-  added to this copy only, so the game can be tested on a phone. Game logic is
-  unchanged.
+  added to this copy only, so the game can be tested on a phone.
+- Camera/movement fix (18 Nov 2026, this copy only — the submitted bundle is
+  unchanged): the driving camera used to sit in front of the car facing
+  backwards, and on-foot movement ran towards the camera; both now follow the
+  camera correctly, and entering a car snaps the camera behind it.
 - Entry submitted to make.fun as `Costa Verde — Streets of Gold`
   (competition `gta6-01`, submission `01a1ec8b-14f7-73a5-b201-e80c34b8baf3`);
   results due 10 December 2026.
