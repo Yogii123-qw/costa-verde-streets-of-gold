@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Costa Verde — Streets of Gold</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1620; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+  #game { display: block; width: 100%; height: 100%; touch-action: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; z-index: 5; display: none; }
+  #hud.on { display: block; }
+  .panel { background: rgba(8, 18, 28, 0.62); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; backdrop-filter: blur(3px); }
+  #topleft { position: absolute; top: 14px; left: 14px; padding: 10px 14px; min-width: 210px; }
+  #stars { font-size: 22px; letter-spacing: 3px; color: #ffd23e; text-shadow: 0 0 8px rgba(255, 210, 62, 0.7); min-height: 26px; }
+  #stars.hot { color: #ff5340; text-shadow: 0 0 10px rgba(255, 60, 30, 0.9); animation: pulse 0.7s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.65; } to { opacity: 1; } }
+  #cash { font-size: 20px; font-weight: 700; color: #7dff9b; margin-top: 2px; }
+  #healthbar { margin-top: 8px; width: 180px; height: 10px; background: rgba(255,255,255,0.18); border-radius: 6px; overflow: hidden; }
+  #healthfill { height: 100%; width: 100%; background: linear-gradient(90deg, #37e07a, #a8ff6a); border-radius: 6px; }
+  #healthlabel { font-size: 11px; letter-spacing: 2px; color: #cfe8ff; margin-top: 3px; }
+  #speedo { font-size: 13px; color: #ffe9a8; margin-top: 6px; }
+  #minimap-wrap { position: absolute; top: 14px; right: 14px; padding: 6px; }
+  #minimap { display: block; border-radius: 6px; }
+  #maplabel { font-size: 10px; letter-spacing: 3px; color: #cfe8ff; text-align: center; margin-top: 4px; }
+  #objective { position: absolute; left: 14px; bottom: 14px; padding: 10px 14px; max-width: 420px; }
+  #obj-title { font-size: 11px; letter-spacing: 3px; color: #ffd23e; }
+  #obj-text { font-size: 15px; font-weight: 600; margin-top: 3px; line-height: 1.35; }
+  #msg { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,0.8); text-align: center; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); display: none; }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 4px #000; }
+  #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #crosshair::after { left: 0; top: 10px; width: 22px; height: 2px; }
+  #hint { position: absolute; right: 14px; bottom: 14px; padding: 8px 12px; font-size: 12px; line-height: 1.6; color: #dceeff; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, rgba(6, 20, 34, 0.88), rgba(20, 8, 30, 0.82)); color: #fff; text-align: center; padding: 20px; }
+  .overlay.hidden { display: none; }
+  .card { max-width: 640px; }
+  .kicker { letter-spacing: 5px; font-size: 12px; color: #ffd23e; font-weight: 700; }
+  h1 { font-size: 56px; line-height: 1.02; margin: 10px 0 4px; font-weight: 900; letter-spacing: 1px; }
+  h1 .gold { color: #ffd23e; }
+  .tagline { font-size: 16px; color: #cfe8ff; margin-bottom: 16px; }
+  .story { font-size: 14px; line-height: 1.6; color: #e8f2ff; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; text-align: left; }
+  .controls { font-size: 13px; line-height: 1.9; color: #dceeff; margin-bottom: 18px; }
+  .controls b { color: #ffd23e; }
+  button { pointer-events: auto; cursor: pointer; font-size: 17px; font-weight: 800; letter-spacing: 1px; color: #12200a; background: linear-gradient(180deg, #ffe066, #ffb52e); border: none; border-radius: 10px; padding: 13px 34px; margin: 4px; box-shadow: 0 4px 18px rgba(255, 181, 46, 0.45); }
+  button.secondary { background: rgba(255,255,255,0.14); color: #fff; box-shadow: none; border: 1px solid rgba(255,255,255,0.3); }
+  button:hover { filter: brightness(1.08); }
+  .small { font-size: 12px; color: #9db8cc; margin-top: 12px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="topleft" class="panel">
+    <div id="stars"></div>
+    <div id="cash">$0</div>
+    <div id="healthbar"><div id="healthfill"></div></div>
+    <div id="healthlabel">DARIO CRUZ &nbsp;·&nbsp; HEALTH</div>
+    <div id="speedo"></div>
+  </div>
+  <div id="minimap-wrap" class="panel">
+    <canvas id="minimap" width="180" height="180"></canvas>
+    <div id="maplabel">COSTA VERDE</div>
+  </div>
+  <div id="objective" class="panel">
+    <div id="obj-title">OBJECTIVE</div>
+    <div id="obj-text">Welcome to Costa Verde.</div>
+  </div>
+  <div id="msg"></div>
+  <div id="crosshair"></div>
+  <div id="hint" class="panel">WASD move / drive &nbsp;·&nbsp; Mouse camera<br>E enter / steal car &nbsp;·&nbsp; Click shoot<br>Shift sprint &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; R reload<br>P pause &nbsp;·&nbsp; M mute &nbsp;·&nbsp; H help</div>
+</div>
+
+<div id="screen-title" class="overlay">
+  <div class="card">
+    <div class="kicker">AN OPEN-WORLD CRIME STORY</div>
+    <h1>COSTA <span class="gold">VERDE</span></h1>
+    <div class="tagline">Streets of Gold — a sun-soaked city, yours for the taking.</div>
+    <div class="story">Dario Cruz came back to Costa Verde with empty pockets and a name to rebuild.
+    The Marlin crew runs the harbor, the cops run the streets, and every car on the avenue is
+    a ride home — if you can take it. Steal wheels, outrun the law, run three jobs for the crew,
+    and take back the city, one mission at a time.</div>
+    <div class="controls">
+      <b>WASD</b> move / drive &nbsp;·&nbsp; <b>Mouse drag</b> camera &nbsp;·&nbsp; <b>E</b> enter or steal a car<br>
+      <b>Click</b> shoot &nbsp;·&nbsp; <b>R</b> reload &nbsp;·&nbsp; <b>Shift</b> sprint &nbsp;·&nbsp; <b>Space</b> jump<br>
+      <b>P</b> pause &nbsp;·&nbsp; <b>M</b> mute &nbsp;·&nbsp; progress saves automatically
+    </div>
+    <button id="btn-start">START THE STORY</button>
+    <button id="btn-continue" class="secondary">CONTINUE</button>
+    <div class="small">Original game — city, characters, story, art, sound and music made for this entry. No network needed.</div>
+  </div>
+</div>
+
+<div id="screen-pause" class="overlay hidden">
+  <div class="card">
+    <div class="kicker">PAUSED</div>
+    <h1>TAKE FIVE</h1>
+    <div class="tagline">The city waits for no one — except right now.</div>
+    <button id="btn-resume">RESUME</button>
+    <button id="btn-quit" class="secondary">QUIT TO TITLE</button>
+  </div>
+</div>
+
+<div id="screen-over" class="overlay hidden">
+  <div class="card">
+    <div class="kicker">BUSTED OR BROKEN</div>
+    <h1>GAME OVER</h1>
+    <div class="tagline" id="over-text">Dario went down. The Verde keeps the score.</div>
+    <button id="btn-retry">TRY AGAIN</button>
+    <button id="btn-over-title" class="secondary">TITLE SCREEN</button>
+  </div>
+</div>
+
+<div id="screen-complete" class="overlay hidden">
+  <div class="card">
+    <div class="kicker">STORY COMPLETE</div>
+    <h1>VERDE IS <span class="gold">YOURS</span></h1>
+    <div class="tagline" id="complete-text">Three jobs done. The Marlin crew answers to Dario Cruz now.</div>
+    <button id="btn-free">KEEP CRUISING</button>
+    <button id="btn-complete-title" class="secondary">TITLE SCREEN</button>
+  </div>
+</div>
+
+<div id="status" aria-live="polite"></div>
+<!-- Touch controls for phone testing (test copy only, not in the graded submission). -->
+<script src="./src/touch.js" defer></script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
